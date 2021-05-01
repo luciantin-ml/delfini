@@ -40,6 +40,7 @@ def model_fasterrcnn_resnet50(hidden_layer_size=256, box_score_thresh=0.5):
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
         pretrained=True,
         box_score_thresh=box_score_thresh,
+        pretrained_backbone=True
     )
 
     # get the number of input features for the classifier

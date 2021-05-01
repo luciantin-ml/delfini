@@ -5,7 +5,7 @@ import math
 import sys
 
 
-def train_model(trial, num_epochs, model, optimizer, scheduler, device, data_loader, data_loader_test, ):
+def train_model_without_optim(num_epochs, model, optimizer, scheduler, device, data_loader, data_loader_test, ):
     # metrics = []
     mean_iou_testset = 0
 
@@ -23,11 +23,38 @@ def train_model(trial, num_epochs, model, optimizer, scheduler, device, data_loa
 
         # -||-
         # show_predictions(model, data_loader=data_loader_test, n=5, score_threshold=0.5)
+        # update learning rate
+        scheduler.step()
+
+    return mean_iou_testset
+
+
+def train_model(trial, params, model, optimizer, scheduler, device, data_loader, data_loader_test, ):
+    # metrics = []
+    mean_iou_testset = 0
+
+    for epoch in range(params["num_epochs"]):
+        print(f"Epoch #{epoch}")
+
+        # train for 1 epoch, has model.train()
+        metric = train_one_epoch(model, optimizer, data_loader, device, epoch=epoch, print_freq=1)
+        print("Metrics", metric)
+        # metrics.append(metric)
+
+        # has model.eval()
+        mean_iou_testset, _ = iou_metric(model, data_loader_test.dataset)
+        print(f"Mean IOU metric for the test set is: {mean_iou_testset}")
+
+        # -||-
+        # show_predictions(model, data_loader=data_loader_test, n=5, score_threshold=0.5)
         trial.report(mean_iou_testset, epoch)
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
         # update learning rate
-        scheduler.step()
+        if params["scheduler"] == "ReduceLROnPlateau":
+            scheduler.step(mean_iou_testset)
+        else:
+            scheduler.step()
 
     return mean_iou_testset
 
