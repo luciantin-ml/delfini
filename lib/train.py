@@ -1,11 +1,13 @@
 from dolphins_recognition_challenge.instance_segmentation.model import show_predictions, iou_metric
 from dolphins_recognition_challenge import utils
+import optuna
 import math
 import sys
 
 
-def train_model(num_epochs, model, optimizer, scheduler, device, data_loader, data_loader_test, ):
-    metrics = []
+def train_model(trial, num_epochs, model, optimizer, scheduler, device, data_loader, data_loader_test, ):
+    # metrics = []
+    mean_iou_testset = 0
 
     for epoch in range(num_epochs):
         print(f"Epoch #{epoch}")
@@ -13,19 +15,21 @@ def train_model(num_epochs, model, optimizer, scheduler, device, data_loader, da
         # train for 1 epoch, has model.train()
         metric = train_one_epoch(model, optimizer, data_loader, device, epoch=epoch, print_freq=1)
         print("Metrics", metric)
-        metrics.append(metric)
+        # metrics.append(metric)
 
         # has model.eval()
         mean_iou_testset, _ = iou_metric(model, data_loader_test.dataset)
         print(f"Mean IOU metric for the test set is: {mean_iou_testset}")
 
         # -||-
-        show_predictions(model, data_loader=data_loader_test, n=5, score_threshold=0.5)
-
+        # show_predictions(model, data_loader=data_loader_test, n=5, score_threshold=0.5)
+        trial.report(mean_iou_testset, epoch)
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned()
         # update learning rate
         scheduler.step()
 
-    return metrics
+    return mean_iou_testset
 
 
 def train_one_epoch(
