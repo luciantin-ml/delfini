@@ -1,4 +1,4 @@
-from dolphins_recognition_challenge.instance_segmentation.model import show_predictions
+from dolphins_recognition_challenge.instance_segmentation.model import show_predictions, iou_metric
 from dolphins_recognition_challenge import utils
 import math
 import sys
@@ -8,16 +8,19 @@ def train_model(num_epochs, model, optimizer, scheduler, device, data_loader, da
     metrics = []
 
     for epoch in range(num_epochs):
-        # train for one epoch, printing every 20 iterations
         print(f"Epoch #{epoch}")
 
-        # train for 1 epoch
-        metric = train_one_epoch(model, optimizer, data_loader, device, epoch=epoch, print_freq=20)
-
+        # train for 1 epoch, has model.train()
+        metric = train_one_epoch(model, optimizer, data_loader, device, epoch=epoch, print_freq=1)
         print("Metrics", metric)
         metrics.append(metric)
-        # show predictions for four images
-        show_predictions(model, data_loader=data_loader_test, n=4, score_threshold=0.5)
+
+        # has model.eval()
+        mean_iou_testset, _ = iou_metric(model, data_loader_test.dataset)
+        print(f"Mean IOU metric for the test set is: {mean_iou_testset}")
+
+        # -||-
+        show_predictions(model, data_loader=data_loader_test, n=5, score_threshold=0.5)
 
         # update learning rate
         scheduler.step()
@@ -33,8 +36,7 @@ def train_one_epoch(
         epoch,
         print_freq=10,
 ):
-    """ Trains one epoch of the model. Copied from the reference implementation from https://github.com/pytorch/vision.git.
-    """
+    """ Trains one epoch of the model. Copied from the reference implementation from https://github.com/pytorch/vision.git. """
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))

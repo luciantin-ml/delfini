@@ -32,6 +32,33 @@ def model_maskrcnn_resnet50(hidden_layer_size=256, box_score_thresh=0.5):
     return model
 
 
+def model_fasterrcnn_resnet50(hidden_layer_size=256, box_score_thresh=0.5):
+    # our dataset has two classes only - background and dolphin
+    num_classes = 2
+
+    # load an instance segmentation model pre-trained on COCO
+    model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+        pretrained=True,
+        box_score_thresh=box_score_thresh,
+    )
+
+    # get the number of input features for the classifier
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    # replace the pre-trained head with a new one
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+
+    # now get the number of input features for the mask classifier
+    in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
+
+    model.roi_heads.mask_predictor = MaskRCNNPredictor(
+        in_channels=in_features_mask,
+        dim_reduced=hidden_layer_size,
+        num_classes=num_classes
+    )
+
+    return model
+
+
 def model_block3():
     return Block3()
 
